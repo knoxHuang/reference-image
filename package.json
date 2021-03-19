@@ -1,0 +1,63 @@
+{
+    "name": "reference-image",
+    "version": "1.0.0",
+    "package_version": 2,
+    "description": "Reference Image",
+    "author": "Cocos Creator",
+    "main": "./dist/browser.js",
+    "panels": {
+        "default": {
+            "title": "i18n:reference-image.title",
+            "main": "./dist/panel/index.js",
+            "flags": {
+                "save": true
+            },
+            "size": {
+                "width": 500,
+                "height": 500,
+                "min-width": 500,
+                "min-height": 500
+            }
+        }
+    },
+    "contributions": {
+        "menu": [
+            {
+                "path": "i18n:menu.panel",
+                "label": "i18n:reference-image.name",
+                "icon": "./statics/icon.png"
+            }
+        ],
+
+        "scene": {
+            "custom": "./dist/scene-toolbars.js",
+            "scripts": "./dist/scene-walker.js"
+        },
+        "profile": {
+            "reference-image": {
+                "index": {
+                    "type": "number",
+                    "default": 0
+                },
+                "images": {
+                    "default": []
+                },
+                "x": {
+                    "type": "number",
+                    "default": 0
+                },
+                "y": {
+                    "type": "number",
+                    "default": 0
+                },
+                "opacity": {
+                    "type": "number",
+                    "default": 0
+                }
+            }
+        }
+    },
+    "dependencies": {
+        "@types/node": "^14.14.35"
+    }
+}
