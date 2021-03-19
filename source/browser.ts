@@ -6,16 +6,21 @@
  * 可以在 package.json 里的 contributions 里定义 messages 触发这里的方法
  * And of course, messages can be defined in the contributions section in package.JSON to trigger the method here
  */
-exports.methods = {};
+export const methods = {
+    open() {
+        console.log('test');
+        Editor.Panel.open('reference-image');
+    },
+};
 
 /**
  * 启动的时候执行的初始化方法
  * Initialization method performed at startup
  */
-exports.load = function() {};
+export const load = function() {};
 
 /**
  * 插件被关闭的时候执行的卸载方法
  * Uninstall method performed when the extension is closed
  */
-exports.unload = function() {};
+export const unload = function() {};

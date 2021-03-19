@@ -1,8 +1,7 @@
 'use strict';
 
-import { dirname, basename, join } from 'path';
+import { dirname, basename, extname, join } from 'path';
 import { readFileSync } from "fs";
-import {pa} from "../../../../../editor-3d-dev/app/platforms/internal/native/source/console/cocosCli";
 
 const { I18n, Message, Dialog, Profile } = Editor;
 
@@ -10,7 +9,7 @@ export const style = readFileSync(join(__dirname, '../../dist/index.css'), 'utf8
 export const template = readFileSync(join(__dirname, '../../../static/index.html'), 'utf8');
 
 export const $ = {
-    images: '.images',
+    ui_images: '.images',
     btnAdd: '.add-images',
     btnDel: '.del-images',
 
@@ -19,27 +18,41 @@ export const $ = {
     opacity: '.opacity'
 };
 
+let images: string[] = [];
+let index: number = 0;
 export const methods = {
 
-    pushImage(path: string) {
-
+    updateImages() {
+        // @ts-ignore
+        const panel = this;
+        // @ts-ignore
+        const ui_images: HTMLElement = panel.$.ui_images;
+        // clear
+        while ( ui_images.firstChild ) {
+            ui_images.removeChild(ui_images.firstChild);
+        }
+        for (let i = 0; i < images.length; ++i) {
+            const path = images[i];
+            const option = document.createElement('div');
+            option.innerHTML = `<option value=${i}>${basename(path, extname(path))}</option>`;
+            ui_images.appendChild(option);
+        }
+        ui_images.setAttribute('value', `${index}`);
     },
 
     async onAddImage() {
         const result = await Dialog.select({
             title: I18n.t('reference-image.dialog.add-image-title'),
-            path: await Profile.getConfig('reference-image', 'add-image-path') || '',
+            path: await Profile.getConfig('reference-image', 'root-path') || '',
             filters: [{ name: 'image', extensions: ['png', 'jpg'] }],
         });
         if (!result || !result.filePaths[0]) {
             return;
         }
-        for (let path in result.filePaths) {
-            this.pushImage(path);
-        }
-        //
+        images = images.concat(result.filePaths);
+        this.updateImages();
         const path = dirname(result.filePaths[0]);
-        await Profile.setConfig('reference-image', 'add-image-path', path);
+        await Profile.setConfig('reference-image', 'root-path', path);
     },
 
     async onDelImage() {
@@ -52,17 +65,22 @@ export const methods = {
             cancel: 1,
         });
         if (result.response === 0) {
-
+            images.splice(index, 1);
+            index--;
+            if (index < 0) {
+                index = 0;
+            }
+            this.updateImages();
         }
     },
 
     async switchImages(path: string) {
+        debugger;
         await Message.request('scene', 'execute-scene-script', {
             name: 'reference-image',
             method: 'switchImages',
             args: [ path ],
         });
-        await Profile.setConfig('reference-image', 'path', path);
     },
 
     async onMoveX(event: Event) {
@@ -104,7 +122,7 @@ export const methods = {
         $.x.addEventListener('confirm', this.onMoveX);
         $.y.addEventListener('confirm', this.onMoveY);
         $.opacity.addEventListener('confirm', this.onSetOpacity);
-        $.images.addEventListener('confirm', this.switchImages);
+        $.ui_images.addEventListener('confirm', this.switchImages);
         $.btnAdd.addEventListener('click', this.onAddImage);
         $.btnDel.addEventListener('click', this.onDelImage);
     },
@@ -115,7 +133,7 @@ export const methods = {
         $.x.removeEventListener('confirm', this.onMoveX);
         $.y.removeEventListener('confirm', this.onMoveY);
         $.opacity.removeEventListener('confirm', this.onSetOpacity);
-        $.images.removeEventListener('confirm', this.switchImages);
+        $.ui_images.removeEventListener('confirm', this.switchImages);
         $.btnAdd.removeEventListener('click', this.onAddImage);
         $.btnDel.removeEventListener('click', this.onDelImage);
     }
@@ -128,15 +146,16 @@ export const ready = async function() {
     panel.$.x.value = await Profile.getConfig('reference-image', 'x') || 0;
     panel.$.y.value = await Profile.getConfig('reference-image', 'y');
     panel.$.opacity.value = await Profile.getConfig('reference-image', 'opacity');
-    panel.$.images.value = await Profile.getConfig('reference-image', 'index');
-    const images = await Profile.getConfig('reference-image', 'images');
-    for (let path in images) {
-        panel.pushImage(path);
-    }
+    index = await Profile.getConfig('reference-image', 'index') || index;
+    panel.$.ui_images.value = index;
+    images = await Profile.getConfig('reference-image', 'images');
+    panel.updateImages();
 };
 
-export const close = function () {
+export const close = async function () {
     // @ts-ignore
     const panel = this;
     panel.unregisterEventListeners();
+    await Profile.setConfig('reference-image', 'images', images);
+    await Profile.setConfig('reference-image', 'index', index);
 };

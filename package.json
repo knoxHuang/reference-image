@@ -30,14 +30,27 @@
         ],
 
         "scene": {
-            "custom": "./dist/scene-toolbars.js",
-            "scripts": "./dist/scene-walker.js"
+            "custom": "./dist/contributions/scene-toolbars.js",
+            "scripts": "./dist/contributions/scene-walker.js"
         },
+
+        "messages": {
+            "open": {
+                "methods": [
+                    "open"
+                ]
+            }
+        },
+
         "profile": {
             "reference-image": {
                 "index": {
                     "type": "number",
                     "default": 0
+                },
+                "root-path": {
+                    "type": "string",
+                    "default": ""
                 },
                 "images": {
                     "default": []
