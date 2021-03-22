@@ -1,3 +1,13 @@
+
+async function showRefernceImage(enabled: boolean) {
+    await Editor.Message.request('scene', 'execute-scene-script', {
+        name: 'reference-image',
+        method: 'setImageVisible',
+        args: [ enabled ],
+    });
+    await Editor.Profile.setConfig('reference-image', 'show', enabled);
+}
+
 exports.toolbars = [
     {
         position: 'right',
@@ -19,22 +29,21 @@ exports.toolbars = [
             icon: '.show-icon',
         },
 
-        onConfirm() {
+        async ready($window: HTMLDivElement) {
             const $icon = this.$.icon as HTMLImageElement;
-            const enabled = $icon.classList.toggle('enabled');
-            if (enabled) {
-
-            }
-            else {
-
-            }
-        },
-
-        ready($window: HTMLDivElement) {
-            this.$.icon.addEventListener('click', this.onConfirm);
+            this.onShow = (enabled: boolean) => {
+                showRefernceImage(enabled);
+            };
+            this.onConfirm = async () => {
+                const enabled = $icon.classList.toggle('enabled');
+                showRefernceImage(enabled);
+            };
+            Editor.Message.addBroadcastListener('reference-image:show', this.onShow);
+            $icon.addEventListener('click', this.onConfirm);
         },
         close () {
             this.$.icon.removeEventListener('click', this.onConfirm);
+            Editor.Message.removeBroadcastListener('reference-image:show', this.onShow);
         }
     }
 ];

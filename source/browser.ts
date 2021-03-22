@@ -8,7 +8,6 @@
  */
 export const methods = {
     open() {
-        console.log('test');
         Editor.Panel.open('reference-image');
     },
 };

@@ -4,26 +4,32 @@ import { join } from "path";
 
 module.paths.push(join(Editor.App.path, 'node_modules'));
 
-import { PrivateNode, Sprite, find, ImageAsset, SpriteFrame } from 'cc';
+import { PrivateNode, Canvas, Sprite, find, ImageAsset, SpriteFrame } from 'cc';
 import { readFileSync } from "fs";
 
 const NAME = 'Reference-Image';
 
 exports.methods = {
     // 通过图片创建参考图
-    getTargets() {
-        let node = find(`Editor Scene Background/${NAME}`);
+    async getTargets() {
+        let canvas = find(`Editor Scene Background/${NAME}-Canvas`);
+        if (!canvas) {
+            canvas = new PrivateNode(`${NAME}-Canvas`);
+            canvas.addComponent(Canvas);
+            canvas.parent = find('Editor Scene Background');
+        }
+        let node = canvas.getChildByName(NAME);
         if (!node) {
-            const root = find('Editor Scene Background');
             node = new PrivateNode(NAME);
-            node.parent = root;
-            cce.Engine.repaintInEditMode();
+            node.parent = canvas;
         }
-        let sprite = node.getComponent(Sprite);
-        if (!sprite) {
-            sprite = node.addComponent(Sprite);
-            this.setOpacity(100);
-        }
+        node.active = await Editor.Profile.getConfig('reference-image', 'show');
+
+        let sprite = node.getComponent(Sprite) || node.addComponent(Sprite);
+        const color = sprite.color;
+        color.a = 100;
+        sprite.color = color;
+        cce.Engine.repaintInEditMode();
         return {
             node,
             sprite
@@ -31,24 +37,24 @@ exports.methods = {
     },
 
     // 移动参考图
-    moveX(x: number) {
-        const { node } = this.getTargets();
+    async moveX(x: number) {
+        const { node } = await this.getTargets();
         const position = node.position;
         position.x = x;
         node.position = position;
         cce.Engine.repaintInEditMode();
     },
 
-    moveY(y: number) {
-        const { node } = this.getTargets();
+    async moveY(y: number) {
+        const { node } = await this.getTargets();
         const position = node.position;
         position.y = y;
-        node.color = position;
+        node.position = position;
         cce.Engine.repaintInEditMode();
     },
 
-    setOpacity(opacity: number) {
-        const { sprite } = this.getTargets();
+    async setOpacity(opacity: number) {
+        const { sprite } = await this.getTargets();
         const color = sprite.color;
         color.a = opacity;
         sprite.color = color;
@@ -56,21 +62,28 @@ exports.methods = {
     },
 
     // 切换参考图
-    switchImages(path: string) {
-        const { sprite } = this.getTargets();
+    async switchImages(path: string) {
+        const { sprite } = await this.getTargets();
         let data: string | Buffer = readFileSync(path);
         data = new Buffer(data).toString('base64');
         let image = new Image();
         image.src = 'data:png;base64,' + data;
-        image.onload = function () {
-            sprite.spriteFrame = SpriteFrame.createWithImage();
+        image.onload = () => {
+            sprite.spriteFrame = SpriteFrame.createWithImage(image);
             cce.Engine.repaintInEditMode();
         }
     },
 
+    // 清空
+    async resetImage() {
+        const { sprite } = await this.getTargets();
+        sprite.spriteFrame = null;
+        cce.Engine.repaintInEditMode();
+    },
+
     // 设置参考图是否显示
-    setImageVisible(value: boolean) {
-        const { node } = this.getTargets();
+    async setImageVisible(value: boolean) {
+        const { node } = await this.getTargets();
         node.active = value;
         cce.Engine.repaintInEditMode();
     }

@@ -6,12 +6,20 @@ import { readFileSync } from "fs";
 const { I18n, Message, Dialog, Profile } = Editor;
 
 export const style = readFileSync(join(__dirname, '../../dist/index.css'), 'utf8');
-export const template = readFileSync(join(__dirname, '../../../static/index.html'), 'utf8');
+export const template = readFileSync(join(__dirname, '../../statics/index.html'), 'utf8');
 
+let ui_editor: HTMLElement;
+let ui_images: HTMLElement;
+let ui_x: HTMLElement;
+let ui_y: HTMLElement;
+let ui_opacity: HTMLElement;
+let btn_add: HTMLElement;
+let btn_del: HTMLElement;
 export const $ = {
+    ui_editor: '.config',
     ui_images: '.images',
-    btnAdd: '.add-images',
-    btnDel: '.del-images',
+    btnAdd: '.add-image',
+    btnDel: '.del-image',
 
     x: '.x',
     y: '.y',
@@ -20,24 +28,50 @@ export const $ = {
 
 let images: string[] = [];
 let index: number = 0;
+let x: number = 0;
+let y: number = 0;
+let opacity: number = 0;
+let show = true;
+
+let onAddImageFunc;
+let onDelImageFunc;
+let onSetOpacityFunc;
+let onSwitchImagesFunc;
 export const methods = {
 
-    updateImages() {
+    async 'scene:ready'() {
+        this.sendSwitchImages();
+        Message.broadcast('reference-image:show', show);
+    },
+
+    async updateImages() {
         // @ts-ignore
         const panel = this;
-        // @ts-ignore
-        const ui_images: HTMLElement = panel.$.ui_images;
         // clear
         while ( ui_images.firstChild ) {
             ui_images.removeChild(ui_images.firstChild);
         }
         for (let i = 0; i < images.length; ++i) {
-            const path = images[i];
-            const option = document.createElement('div');
-            option.innerHTML = `<option value=${i}>${basename(path, extname(path))}</option>`;
+            const option = document.createElement('option');
+            option.setAttribute('value', `${i}`);
             ui_images.appendChild(option);
+            const path = images[i];
+            option.text = basename(path, extname(path));
         }
-        ui_images.setAttribute('value', `${index}`);
+        btn_del.removeAttribute('disabled');
+        ui_editor.removeAttribute('disabled');
+        ui_images.removeAttribute('placeholder');
+        ui_images.setAttribute('value', '');
+        if (images.length === 0) {
+            ui_images.setAttribute('placeholder', I18n.t('reference-image.none'));
+            btn_del.setAttribute('disabled', '');
+            ui_editor.setAttribute('disabled', '');
+            await this.resetImage();
+        }
+        else {
+            ui_images.setAttribute('value', `${index}`);
+            await this.sendSwitchImages();
+        }
     },
 
     async onAddImage() {
@@ -49,14 +83,21 @@ export const methods = {
         if (!result || !result.filePaths[0]) {
             return;
         }
-        images = images.concat(result.filePaths);
-        this.updateImages();
+        for (let path of result.filePaths) {
+            if (!images.includes(path)) {
+                images.push(path);
+            }
+        }
+        index = images.length - 1;
+        await this.updateImages();
         const path = dirname(result.filePaths[0]);
         await Profile.setConfig('reference-image', 'root-path', path);
     },
 
     async onDelImage() {
-        const result = await Dialog.info(I18n.t('reference-image.dialog.del_image_message'), {
+        const result = await Dialog.info(I18n.t('reference-image.dialog.del_image_message', {
+            path: images[index]
+        }), {
             buttons: [
                 I18n.t('reference-image.dialog.yes'),
                 I18n.t('reference-image.dialog.cancel'),
@@ -70,86 +111,132 @@ export const methods = {
             if (index < 0) {
                 index = 0;
             }
-            this.updateImages();
+            await this.updateImages();
         }
     },
 
-    async switchImages(path: string) {
-        debugger;
+    async resetImage() {
+        await Message.request('scene', 'execute-scene-script', {
+            name: 'reference-image',
+            method: 'resetImage',
+        });
+    },
+
+    async sendSwitchImages() {
+        const path: string = images[index];
         await Message.request('scene', 'execute-scene-script', {
             name: 'reference-image',
             method: 'switchImages',
             args: [ path ],
         });
+        this.sendMoveX();
+        this.sendMoveY();
+        this.sendOpacity();
     },
 
-    async onMoveX(event: Event) {
+    async onSwitchImages(event: Event) {
         // @ts-ignore
-        const x = event.target.value;
-        await Message.request('scene', 'execute-scene-script', {
-            name: 'reference-image',
-            method: 'moveX',
-            args: [ x ],
-        });
-        await Profile.setConfig('reference-image', 'x', x);
+        index = parseInt(event.target.value);
+        await this.sendSwitchImages();
     },
 
-    async onMoveY(event: Event) {
-        // @ts-ignore
-        const y = event.target.value;
-        await Message.request('scene', 'execute-scene-script', {
-            name: 'reference-image',
-            method: 'moveY',
-            args: [ y ],
-        });
-        await Profile.setConfig('reference-image', 'y', y);
-    },
-
-    async onSetOpacity(event: Event) {
-        // @ts-ignore
-        const opacity = event.target.value;
+    async sendOpacity() {
         await Message.request('scene', 'execute-scene-script', {
             name: 'reference-image',
             method: 'setOpacity',
             args: [ opacity ],
         });
+    },
+
+    async sendMoveX() {
+        await Message.request('scene', 'execute-scene-script', {
+            name: 'reference-image',
+            method: 'moveX',
+            args: [ x ],
+        });
+    },
+
+    async sendMoveY() {
+        await Message.request('scene', 'execute-scene-script', {
+            name: 'reference-image',
+            method: 'moveY',
+            args: [ y ],
+        });
+    },
+
+    async onMoveX(event: Event) {
+        // @ts-ignore
+        x = event.target.value;
+        await Profile.setConfig('reference-image', 'x', x);
+        await this.sendMoveX();
+    },
+
+    async onMoveY(event: Event) {
+        // @ts-ignore
+        y = event.target.value;
+        await Profile.setConfig('reference-image', 'y', y);
+        await this.sendMoveY();
+    },
+
+    async onSetOpacity(event: Event) {
+        // @ts-ignore
+        opacity = event.target.value;
         await Profile.setConfig('reference-image', 'opacity', opacity);
+        await this.sendOpacity();
     },
 
     registerEventListeners() {
         // @ts-ignore
-        const $ = this.$;
-        $.x.addEventListener('confirm', this.onMoveX);
-        $.y.addEventListener('confirm', this.onMoveY);
-        $.opacity.addEventListener('confirm', this.onSetOpacity);
-        $.ui_images.addEventListener('confirm', this.switchImages);
-        $.btnAdd.addEventListener('click', this.onAddImage);
-        $.btnDel.addEventListener('click', this.onDelImage);
+        ui_x.addEventListener('confirm', this.onMoveX);
+        ui_y.addEventListener('confirm', this.onMoveY);
+        onSetOpacityFunc = this.onSetOpacity.bind(this);
+        ui_opacity.addEventListener('confirm', onSetOpacityFunc);
+        onSwitchImagesFunc = this.onSwitchImages.bind(this);
+        ui_images.addEventListener('confirm', onSwitchImagesFunc);
+        onAddImageFunc = this.onAddImage.bind(this);
+        btn_add.addEventListener('click', onAddImageFunc);
+        onDelImageFunc = this.onDelImage.bind(this);
+        btn_del.addEventListener('click', onDelImageFunc);
     },
 
     unregisterEventListeners() {
         // @ts-ignore
-        const $ = this.$;
-        $.x.removeEventListener('confirm', this.onMoveX);
-        $.y.removeEventListener('confirm', this.onMoveY);
-        $.opacity.removeEventListener('confirm', this.onSetOpacity);
-        $.ui_images.removeEventListener('confirm', this.switchImages);
-        $.btnAdd.removeEventListener('click', this.onAddImage);
-        $.btnDel.removeEventListener('click', this.onDelImage);
+        ui_x.removeEventListener('confirm', this.onMoveX);
+        ui_y.removeEventListener('confirm', this.onMoveY);
+        ui_opacity.removeEventListener('confirm', onSetOpacityFunc);
+        ui_images.removeEventListener('confirm', onSwitchImagesFunc);
+        btn_add.removeEventListener('click', onAddImageFunc);
+        btn_del.removeEventListener('click', onDelImageFunc);
     }
 };
 
 export const ready = async function() {
     // @ts-ignore
     const panel = this;
+
+    ui_x = panel.$.x;
+    ui_y = panel.$.y;
+    ui_editor = panel.$.ui_editor;
+    ui_images = panel.$.ui_images;
+    ui_opacity = panel.$.opacity;
+    btn_add = panel.$.btnAdd;
+    btn_del = panel.$.btnDel;
+
     panel.registerEventListeners();
-    panel.$.x.value = await Profile.getConfig('reference-image', 'x') || 0;
-    panel.$.y.value = await Profile.getConfig('reference-image', 'y');
-    panel.$.opacity.value = await Profile.getConfig('reference-image', 'opacity');
+    x = await Profile.getConfig('reference-image', 'x') || 0;
+    y = await Profile.getConfig('reference-image', 'y') || 0;
+    opacity = await Profile.getConfig('reference-image', 'opacity') || 100;
     index = await Profile.getConfig('reference-image', 'index') || index;
-    panel.$.ui_images.value = index;
-    images = await Profile.getConfig('reference-image', 'images');
-    panel.updateImages();
+    images = await Profile.getConfig('reference-image', 'images') || [];
+
+    ui_x.value = x;
+    ui_y.value = y;
+    ui_opacity.value = opacity;
+    ui_images.value = index;
+    await panel.updateImages();
+
+    show = await Profile.getConfig('reference-image', 'show');
+    Message.broadcast('reference-image:show', show);
 };
 
 export const close = async function () {

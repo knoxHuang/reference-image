@@ -5,18 +5,22 @@
     "description": "Reference Image",
     "author": "Cocos Creator",
     "main": "./dist/browser.js",
+    "scripts": {
+        "build:css": "node ./build/build-css.js"
+    },
     "panels": {
         "default": {
-            "title": "i18n:reference-image.title",
+            "title": "i18n:reference-image.name",
             "main": "./dist/panel/index.js",
+            "icon": "./statics/icon.png",
             "flags": {
                 "save": true
             },
             "size": {
                 "width": 500,
-                "height": 500,
+                "height": 300,
                 "min-width": 500,
-                "min-height": 500
+                "min-height": 300
             }
         }
     },
@@ -25,25 +29,39 @@
             {
                 "path": "i18n:menu.panel",
                 "label": "i18n:reference-image.name",
-                "icon": "./statics/icon.png"
+                "icon": "./statics/icon.png",
+                "message": "open"
+            }
+        ],
+
+        "shortcuts": [
+            {
+                "message": "open",
+                "win": "ctrl+9",
+                "mac": "cmd+9"
             }
         ],
 
         "scene": {
             "custom": "./dist/contributions/scene-toolbars.js",
-            "scripts": "./dist/contributions/scene-walker.js"
+            "script": "./dist/contributions/scene-walker.js"
         },
 
         "messages": {
             "open": {
-                "methods": [
-                    "open"
-                ]
+                "methods": ["open"]
+            },
+            "scene:ready": {
+                "methods": ["default.scene:ready"]
             }
         },
 
         "profile": {
             "reference-image": {
+                "show": {
+                    "type": "boolean",
+                    "default": true
+                },
                 "index": {
                     "type": "number",
                     "default": 0
