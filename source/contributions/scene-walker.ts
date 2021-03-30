@@ -2,8 +2,12 @@
 
 import { join } from "path";
 
+declare const cce: any;
+declare const Editor: any;
+
 module.paths.push(join(Editor.App.path, 'node_modules'));
 
+// @ts-ignore
 import { PrivateNode, Canvas, Sprite, find, ImageAsset, SpriteFrame } from 'cc';
 import { readFileSync } from "fs";
 
@@ -11,12 +15,15 @@ const NAME = 'Reference-Image';
 
 exports.methods = {
     // 通过图片创建参考图
-    async getTargets() {
+    async getTargets(openPanel: boolean) {
         let canvas = find(`Editor Scene Background/${NAME}-Canvas`);
         if (!canvas) {
             canvas = new PrivateNode(`${NAME}-Canvas`);
             canvas.addComponent(Canvas);
             canvas.parent = find('Editor Scene Background');
+            if (openPanel) {
+                Editor.Panel.open('reference-image');
+            }
         }
         let node = canvas.getChildByName(NAME);
         if (!node) {
@@ -27,7 +34,7 @@ exports.methods = {
 
         let sprite = node.getComponent(Sprite) || node.addComponent(Sprite);
         const color = sprite.color;
-        color.a = 100;
+        color.a = await Editor.Profile.getConfig('reference-image', 'opacity') || 100;
         sprite.color = color;
         cce.Engine.repaintInEditMode();
         return {
@@ -83,7 +90,7 @@ exports.methods = {
 
     // 设置参考图是否显示
     async setImageVisible(value: boolean) {
-        const { node } = await this.getTargets();
+        const { node } = await this.getTargets(true);
         node.active = value;
         cce.Engine.repaintInEditMode();
     }

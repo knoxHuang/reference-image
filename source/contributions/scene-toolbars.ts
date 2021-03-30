@@ -1,4 +1,6 @@
 
+declare const Editor: any;
+
 async function showRefernceImage(enabled: boolean) {
     await Editor.Message.request('scene', 'execute-scene-script', {
         name: 'reference-image',
@@ -23,7 +25,7 @@ exports.toolbars = [
                 }
             </style>
 
-            <ui-icon value='auto-atlas' class="show-icon" tooltip="i18n:reference-image.show_tips"></ui-icon>
+            <ui-icon value='ref-image' class="show-icon" tooltip="i18n:reference-image.show_tips"></ui-icon>
         `,
         $: {
             icon: '.show-icon',

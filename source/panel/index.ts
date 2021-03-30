@@ -1,5 +1,7 @@
 'use strict';
 
+declare const Editor: any;
+
 import { dirname, basename, extname, join } from 'path';
 import { readFileSync } from "fs";
 
@@ -33,10 +35,12 @@ let y: number = 0;
 let opacity: number = 0;
 let show = true;
 
-let onAddImageFunc;
-let onDelImageFunc;
-let onSetOpacityFunc;
-let onSwitchImagesFunc;
+let onMoveXFunc: any;
+let onMoveYFunc: any;
+let onAddImageFunc: any;
+let onDelImageFunc: any;
+let onSetOpacityFunc: any;
+let onSwitchImagesFunc: any;
 export const methods = {
 
     async 'scene:ready'() {
@@ -129,9 +133,9 @@ export const methods = {
             method: 'switchImages',
             args: [ path ],
         });
-        this.sendMoveX();
-        this.sendMoveY();
-        this.sendOpacity();
+        await this.sendMoveX();
+        await this.sendMoveY();
+        await this.sendOpacity();
     },
 
     async onSwitchImages(event: Event) {
@@ -186,23 +190,24 @@ export const methods = {
     },
 
     registerEventListeners() {
-        // @ts-ignore
-        ui_x.addEventListener('confirm', this.onMoveX);
-        ui_y.addEventListener('confirm', this.onMoveY);
+        onMoveXFunc = this.onMoveX.bind(this);
+        onMoveYFunc = this.onMoveY.bind(this);
         onSetOpacityFunc = this.onSetOpacity.bind(this);
-        ui_opacity.addEventListener('confirm', onSetOpacityFunc);
         onSwitchImagesFunc = this.onSwitchImages.bind(this);
-        ui_images.addEventListener('confirm', onSwitchImagesFunc);
         onAddImageFunc = this.onAddImage.bind(this);
-        btn_add.addEventListener('click', onAddImageFunc);
         onDelImageFunc = this.onDelImage.bind(this);
+
+        ui_x.addEventListener('confirm', onMoveXFunc);
+        ui_y.addEventListener('confirm', onMoveYFunc);
+        ui_opacity.addEventListener('confirm', onSetOpacityFunc);
+        ui_images.addEventListener('confirm', onSwitchImagesFunc);
+        btn_add.addEventListener('click', onAddImageFunc);
         btn_del.addEventListener('click', onDelImageFunc);
     },
 
     unregisterEventListeners() {
-        // @ts-ignore
-        ui_x.removeEventListener('confirm', this.onMoveX);
-        ui_y.removeEventListener('confirm', this.onMoveY);
+        ui_x.removeEventListener('confirm', onMoveXFunc);
+        ui_y.removeEventListener('confirm', onMoveYFunc);
         ui_opacity.removeEventListener('confirm', onSetOpacityFunc);
         ui_images.removeEventListener('confirm', onSwitchImagesFunc);
         btn_add.removeEventListener('click', onAddImageFunc);
@@ -229,9 +234,13 @@ export const ready = async function() {
     index = await Profile.getConfig('reference-image', 'index') || index;
     images = await Profile.getConfig('reference-image', 'images') || [];
 
+    // @ts-ignore
     ui_x.value = x;
+    // @ts-ignore
     ui_y.value = y;
+    // @ts-ignore
     ui_opacity.value = opacity;
+    // @ts-ignore
     ui_images.value = index;
     await panel.updateImages();
 
@@ -241,8 +250,7 @@ export const ready = async function() {
 
 export const close = async function () {
     // @ts-ignore
-    const panel = this;
-    panel.unregisterEventListeners();
+    this.unregisterEventListeners();
     await Profile.setConfig('reference-image', 'images', images);
     await Profile.setConfig('reference-image', 'index', index);
 };
