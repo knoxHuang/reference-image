@@ -10,9 +10,7 @@
     "strict": true,
     "experimentalDecorators": true,
     "types": [
-        "node",
-
-        "../../@types/private"
+        "node"
     ],
     "lib": [
         "dom",

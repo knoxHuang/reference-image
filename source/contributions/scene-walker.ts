@@ -15,15 +15,12 @@ const NAME = 'Reference-Image';
 
 exports.methods = {
     // 通过图片创建参考图
-    async getTargets(openPanel: boolean) {
+    async getTargets() {
         let canvas = find(`Editor Scene Background/${NAME}-Canvas`);
         if (!canvas) {
             canvas = new PrivateNode(`${NAME}-Canvas`);
             canvas.addComponent(Canvas);
             canvas.parent = find('Editor Scene Background');
-            if (openPanel) {
-                Editor.Panel.open('reference-image');
-            }
         }
         let node = canvas.getChildByName(NAME);
         if (!node) {
@@ -90,8 +87,14 @@ exports.methods = {
 
     // 设置参考图是否显示
     async setImageVisible(value: boolean) {
-        const { node } = await this.getTargets(true);
+        const { node } = await this.getTargets();
         node.active = value;
+        if (value) {
+            let images = await Editor.Profile.getConfig('reference-image', 'images');
+            if (images && images.length === 0) {
+                Editor.Panel.open('reference-image');
+            }
+        }
         cce.Engine.repaintInEditMode();
     }
 };
