@@ -6,7 +6,8 @@
     "author": "Cocos Creator",
     "main": "./dist/browser.js",
     "scripts": {
-        "build:css": "node ./build/build-css.js"
+        "build:css": "node ./build/build-css.js",
+        "build": "node ./unpack/index.js"
     },
     "panels": {
         "default": {
@@ -89,6 +90,7 @@
         }
     },
     "dependencies": {
-        "@types/node": "^14.14.35"
+        "@types/node": "^14.14.35",
+        "fs-extra": "^9.1.0"
     }
 }
